@@ -1,49 +1,54 @@
-// src/hooks/useFetch.js
-import { useState, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-/**
- * Custom hook for fetching data
- * @param {Function} fetchFn - async function that returns promise (e.g., fetchDashboardData)
- * @param {Array} deps - dependencies to re-run fetch (like useEffect)
- * @returns {Object} { data, loading, error, refetch }
- */
-export const useFetch = (fetchFn, deps = []) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  
-  // To prevent state update if component unmounts
-  const isMounted = useRef(true);
+export function useFetch(key, fetcher, options = {}) {
+  const { enabled = true } = options;
+  const [state, setState] = useState(() => (enabled ? { status: 'loading' } : { status: 'idle' }));
+  const fetcherRef = useRef(fetcher);
+  fetcherRef.current = fetcher;
 
-  // Function to manually refetch data
-  const refetch = async () => {
-    setLoading(true);
-    setError(null);
+  const run = useCallback(async (signal) => {
+    setState({ status: 'loading' });
     try {
-      const result = await fetchFn();
-      if (isMounted.current) {
-        setData(result);
+      const data = await fetcherRef.current(signal);
+      if (!signal.aborted) {
+        setState({ status: 'success', data });
       }
-    } catch (err) {
-      if (isMounted.current) {
-        setError(err.message || "Something went wrong");
+      return data;
+    } catch (e) {
+      if (e?.name === 'AbortError') return undefined;
+      const error = e instanceof Error ? e : new Error('Unknown error');
+      if (!signal.aborted) {
+        setState({ status: 'error', error });
       }
-    } finally {
-      if (isMounted.current) {
-        setLoading(false);
-      }
+      throw error;
     }
-  };
+  }, []);
+
+  const refetch = useCallback(() => {
+    const controller = new AbortController();
+    return run(controller.signal);
+  }, [run]);
 
   useEffect(() => {
-    isMounted.current = true;
-    refetch();
+    if (!enabled) return;
+    const controller = new AbortController();
+    void run(controller.signal);
+    return () => controller.abort();
+  }, [enabled, key, run]);
 
-    // Cleanup function – component unmount pe flag false karo
-    return () => {
-      isMounted.current = false;
-    };
-  }, [...deps]); // Re-run when dependencies change
+  return { state, refetch };
+}
 
-  return { data, loading, error, refetch };
-};
+/**
+ * AbortSignal-aware JSON fetch helper (swap mocks → REST).
+ */
+export function createJsonFetcher(url, init) {
+  return async (signal) => {
+    const res = await fetch(url, { ...init, signal });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => res.statusText);
+      throw new Error(detail || `Request failed (${res.status})`);
+    }
+    return res.json();
+  };
+}
