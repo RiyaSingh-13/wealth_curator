@@ -7,8 +7,7 @@ import { font, radii, space } from '../../../theme';
 const TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'portfolio', label: 'Portfolio' },
-  { key: 'insights', label: 'Insights' },
-  { key: 'documents', label: 'Planning' },
+  
 ];
 
 export const MainHeader = memo(function MainHeader({
