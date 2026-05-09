@@ -75,7 +75,7 @@ export const MainHeader = memo(function MainHeader({
             WELCOME BACK ALAXANDRA!
             </text>
             <br />
-          <Text  style={{color: colors.text, fontSize: 14, fontWeight: '400' ,fontStyle: 'italic'}}>It is the best time to manage you finance</Text>
+          {/* <Text  style={{color: colors.text, fontSize: 14, fontWeight: '400' ,fontStyle: 'italic'}}>It is the best time to manage you finance</Text> */}
           </view>
           
         </View>
