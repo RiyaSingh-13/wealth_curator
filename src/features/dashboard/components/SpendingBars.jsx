@@ -1,13 +1,16 @@
 import { PieChart } from 'lucide-react';
-import { lazy, memo, Suspense, useMemo } from 'react';
-import { StyleSheet as RNStyleSheet, Text, View } from 'react-native-web';
+import { lazy, memo, Suspense, useCallback, useMemo } from 'react';
+import { Pressable, StyleSheet as RNStyleSheet, Text, View } from 'react-native-web';
+import { useNavigate } from 'react-router-dom';
 import { IconGlyph } from '../../../components/icons/IconGlyph.jsx';
 import { font, radii, space } from '../../../theme';
 
 const SpendingRecharts = lazy(() => import('./SpendingRecharts'));
 
 export const SpendingBars = memo(function SpendingBars({ colors, slices }) {
+  const navigate = useNavigate();
   const max = useMemo(() => Math.max(...slices.map((s) => s.amount), 1), [slices]);
+  const onViewAll = useCallback(() => navigate('/budgets'), [navigate]);
 
   return (
     <View style={styles.section}>
@@ -17,9 +20,14 @@ export const SpendingBars = memo(function SpendingBars({ colors, slices }) {
           <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
             Category allocation
           </Text>
-          <Text style={[styles.sub, { color: colors.accent }]} accessibilityRole="link">
-            View all categories
-          </Text>
+          <Pressable
+            onPress={onViewAll}
+            accessibilityRole="button"
+            accessibilityLabel="View all budget categories"
+            style={({ pressed }) => [pressed && { opacity: 0.8 }]}
+          >
+            <Text style={[styles.sub, { color: colors.accent }]}>View all categories</Text>
+          </Pressable>
         </View>
       </View>
       <Text style={[styles.sectionCaption, { color: colors.textMuted }]}>Category share of modeled monthly outflows</Text>

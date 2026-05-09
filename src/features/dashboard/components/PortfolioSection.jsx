@@ -1,92 +1,152 @@
-import { LineChart } from 'lucide-react';
+import { LineChart, TrendingUp, TrendingDown, BarChart3, DollarSign, Activity } from 'lucide-react';
 import { memo } from 'react';
-import { StyleSheet as RNStyleSheet, Text, View } from 'react-native-web';
+import { StyleSheet as RNStyleSheet, Text, View, useWindowDimensions } from 'react-native-web';
 import { IconGlyph } from '../../../components/icons/IconGlyph.jsx';
 import { font, radii, space } from '../../../theme';
 
+// Import the modern dashboard components
+import { AccountSummaryCard } from './AccountSummaryCard.jsx';
+import { AccountPerformance } from './AccountPerformance.jsx';
+import { AccountAllocation } from './AccountAllocation.jsx';
+import { AccountSummary } from './AccountSummary.jsx';
+import { AccountOverview } from './AccountOverview.jsx';
+
 export const PortfolioSection = memo(function PortfolioSection({ colors, holdings }) {
-  const sorted = [...holdings].sort((a, b) => b.weightPct - a.weightPct);
+  const { width } = useWindowDimensions();
+  const wide = width > 900;
+  const compact = width < 640;
 
   return (
-    <View nativeID="section-portfolio" style={styles.wrap}>
-      <View style={styles.headingRow} accessibilityRole="header">
-        <IconGlyph icon={LineChart} size={24} color={colors.accent} strokeWidth={2} />
-        <Text style={[styles.title, { color: colors.text }]} accessibilityRole="text">
-          Portfolio
+    <View nativeID="section-portfolio" style={styles.page}>
+      {/* Portfolio Header */}
+      <View style={styles.pageHead}>
+        <View style={styles.headingRow} accessibilityRole="header">
+          <IconGlyph icon={LineChart} size={24} color={colors.accent} strokeWidth={2} />
+          <Text style={[styles.pageTitle, { color: colors.text }]} accessibilityRole="text">
+            Portfolio
+          </Text>
+        </View>
+        <Text style={[styles.pageSub, { color: colors.textMuted }]}>
+          Track your investment performance and allocation across all accounts
         </Text>
       </View>
-      <Text style={[styles.sub, { color: colors.textMuted }]}>
-        Public sleeve weights — use navigation to reconcile with your policy targets.
-      </Text>
-      {sorted.length === 0 ? (
-        <Text style={[styles.empty, { color: colors.textSecondary }]}>
-          No live positions surfaced — sync custodians to populate sleeve weights.
-        </Text>
-      ) : (
-        <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.bgElevated }]}>
-          <View style={[styles.headRow, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.th, styles.colSym, { color: colors.textMuted }]}>Symbol</Text>
-            <Text style={[styles.th, styles.colName, { color: colors.textMuted }]}>Name</Text>
-            <Text style={[styles.th, styles.colSec, { color: colors.textMuted }]}>Sector</Text>
-            <Text style={[styles.th, styles.colPct, { color: colors.textMuted }]}>Weight</Text>
-          </View>
-          {sorted.map((h) => {
-            const drift = h.weightPct - h.prevWeightPct;
-            const driftStr = `${drift >= 0 ? '+' : ''}${drift.toFixed(1)}%`;
-            return (
-              <View
-                key={h.id}
-                style={[styles.row, { borderTopColor: colors.border }]}
-                accessibilityLabel={`${h.symbol}, ${h.name}, ${h.weightPct} percent`}
-              >
-                <Text style={[styles.td, styles.colSym, { color: colors.accent, fontWeight: '800' }]}>{h.symbol}</Text>
-                <Text style={[styles.td, styles.colName, { color: colors.text }]} numberOfLines={2}>
-                  {h.name}
-                </Text>
-                <Text style={[styles.td, styles.colSec, { color: colors.textSecondary }]}>{h.sector}</Text>
-                <View style={styles.colPct}>
-                  <Text style={[styles.td, { color: colors.text, fontVariant: ['tabular-nums'] }]}>
-                    {h.weightPct.toFixed(1)}%
-                  </Text>
-                  <Text style={[styles.drift, { color: drift >= 0 ? colors.positive : colors.negative }]}>{driftStr}</Text>
-                </View>
-              </View>
-            );
-          })}
+
+      {/* Top Row - Summary Cards */}
+      <View style={styles.gridTop}>
+        <AccountSummaryCard
+          colors={colors}
+          title="Total Portfolio Value"
+          value="$1,284,750"
+          change="+$24,750.45"
+          changePercent="+1.96%"
+          changeLabel="today"
+          icon={LineChart}
+          iconColor="#8b5cf6"
+          trend="up"
+        />
+        <AccountSummaryCard
+          colors={colors}
+          title="Total Invested"
+          value="$1,042,350"
+          change="+$12,350.00"
+          changePercent="+1.20%"
+          changeLabel="total invested"
+          icon={DollarSign}
+          iconColor="#3b82f6"
+          trend="up"
+        />
+        <AccountSummaryCard
+          colors={colors}
+          title="Total Gain / Loss"
+          value="+$242,400"
+          change="+23.27%"
+          changePercent=""
+          changeLabel="total return"
+          icon={LineChart}
+          iconColor="#10b981"
+          trend="up"
+        />
+        <AccountSummaryCard
+          colors={colors}
+          title="Today's Gain"
+          value="+$24,750"
+          change="+1.96%"
+          changePercent=""
+          changeLabel=""
+          icon={Activity}
+          iconColor="#f59e0b"
+          trend="up"
+        />
+      </View>
+
+      {/* Middle Row - Account Performance (Full Width) */}
+      <View style={styles.performanceRow}>
+        <AccountPerformance colors={colors} />
+      </View>
+
+      {/* Next Row - Account Allocation and Account Summary */}
+      <View style={wide ? styles.gridMid : styles.col}>
+        <View style={styles.allocationColumn}>
+          <AccountAllocation colors={colors} />
         </View>
-      )}
+        <View style={styles.summaryColumn}>
+          <AccountSummary colors={colors} />
+        </View>
+      </View>
+
+      {/* Bottom Row - Holdings Overview */}
+      <View style={styles.holdingsColumn}>
+        <AccountOverview colors={colors} />
+      </View>
     </View>
   );
 });
 
 const styles = RNStyleSheet.create({
-  wrap: { gap: space.sm },
-  headingRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
-  title: { fontFamily: font.serif, fontSize: 26 },
-  sub: { fontFamily: font.sans, fontSize: 14, lineHeight: 20, maxWidth: 720 },
-  empty: { fontFamily: font.sans, fontSize: 14, lineHeight: 20 },
-  card: { borderWidth: 1, borderRadius: radii.lg, overflow: 'hidden' },
-  headRow: {
+  page: { gap: space.lg },
+  pageHead: { gap: space.xs, maxWidth: 900 },
+  pageTitle: { fontFamily: font.sans, fontSize: 32, fontWeight: '800', letterSpacing: -0.8 },
+  pageSub: { fontFamily: font.sans, fontSize: 15, lineHeight: 22 },
+  gridTop: { flexDirection: 'row', gap: space.md, alignItems: 'stretch' },
+  gridMid: { flexDirection: 'row', gap: space.md, alignItems: 'stretch' },
+  col: { gap: space.md },
+  performanceRow: { width: '100%' },
+  allocationColumn: { flex: 1 },
+  summaryColumn: { flex: 1 },
+  holdingsColumn: { flex: 1, minWidth: 0 },
+  headingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderBottomWidth: RNStyleSheet.hairlineWidth,
-    gap: space.sm,
+    gap: space.md,
+    flexWrap: 'wrap',
   },
-  th: { fontFamily: font.sans, fontSize: 10, fontWeight: '800', letterSpacing: 1.1, textTransform: 'uppercase' },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: space.md,
-    paddingVertical: space.md,
-    borderTopWidth: RNStyleSheet.hairlineWidth,
-    gap: space.sm,
+  // Responsive breakpoints
+  '@media (max-width: 768px)': {
+    page: { gap: space.xl, padding: space.md },
+    pageHead: { gap: space.md, maxWidth: '100%' },
+    pageTitle: { fontSize: 32, fontWeight: '900', letterSpacing: -0.8 },
+    pageSub: { fontSize: 16, lineHeight: 24 },
+    gridTop: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md, justifyContent: 'space-between' },
+    gridMid: { flexDirection: 'column', gap: space.lg },
+    col: { gap: space.lg },
+    performanceRow: { width: '100%' },
+    allocationColumn: { flex: '1 1 100%' },
+    summaryColumn: { flex: '1 1 100%' },
+    holdingsColumn: { flex: '1 1 100%' },
+    headingRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   },
-  td: { fontFamily: font.sans, fontSize: 13 },
-  colSym: { width: 56, flexShrink: 0 },
-  colName: { flex: 1.2, minWidth: 100 },
-  colSec: { width: 88, flexShrink: 0 },
-  colPct: { width: 80, alignItems: 'flex-end' },
-  drift: { fontFamily: font.sans, fontSize: 11, fontWeight: '700', marginTop: 2 },
+  '@media (max-width: 480px)': {
+    page: { gap: space.lg, padding: space.sm },
+    pageHead: { gap: space.sm, maxWidth: '100%' },
+    pageTitle: { fontSize: 28, fontWeight: '900', letterSpacing: -0.6 },
+    pageSub: { fontSize: 15, lineHeight: 22 },
+    gridTop: { flexDirection: 'column', gap: space.md },
+    gridMid: { flexDirection: 'column', gap: space.lg },
+    col: { gap: space.lg },
+    performanceRow: { width: '100%' },
+    allocationColumn: { flex: '1 1 100%' },
+    summaryColumn: { flex: '1 1 100%' },
+    holdingsColumn: { flex: '1 1 100%' },
+    headingRow: { flexDirection: 'column', alignItems: 'flex-start', gap: space.sm },
+  },
 });

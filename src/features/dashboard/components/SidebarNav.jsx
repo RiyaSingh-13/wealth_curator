@@ -1,15 +1,10 @@
-import {
-  ArrowRightLeft,
-  Building2,
-  FolderOpen,
-  LayoutDashboard,
-  Sparkles,
-  Target,
-} from 'lucide-react';
-import { memo, useCallback } from 'react';
+import { ArrowRightLeft, Building2, Flag, LayoutDashboard, Sparkles, Target } from 'lucide-react';
+import { memo, useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet as RNStyleSheet, Text, View, useWindowDimensions } from 'react-native-web';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { IconGlyph } from '../../../components/icons/IconGlyph.jsx';
 import { font, radii, space } from '../../../theme';
+import { pathForSectionKey, sectionKeyFromParam } from '../routePaths.js';
 
 const ITEMS = [
   { key: 'overview', label: 'Dashboard', icon: LayoutDashboard },
@@ -17,12 +12,22 @@ const ITEMS = [
   { key: 'cashflow', label: 'Transactions', icon: ArrowRightLeft },
   { key: 'budgets', label: 'Budgets', icon: Target },
   { key: 'insights', label: 'Insights', icon: Sparkles },
-  { key: 'documents', label: 'Documents', icon: FolderOpen },
+  { key: 'goals', label: 'Goals', icon: Flag },
 ];
 
-export const SidebarNav = memo(function SidebarNav({ colors, activeNav, onNav, onRequestClose }) {
+export const SidebarNav = memo(function SidebarNav({ colors, onRequestClose }) {
   const { width } = useWindowDimensions();
+  const navigate = useNavigate();
+  const location = useLocation();
   const narrow = width < 1024;
+  const wrapNav = narrow && width < 520;
+  const isMobile = width < 768;
+
+  const pathSegment = useMemo(
+    () => location.pathname.replace(/^\//, '').split('/')[0] || 'dashboard',
+    [location.pathname],
+  );
+  const activeNav = sectionKeyFromParam(pathSegment) ?? 'overview';
 
   const item = useCallback(
     ({ key, label, icon: NavIcon }) => {
@@ -31,7 +36,7 @@ export const SidebarNav = memo(function SidebarNav({ colors, activeNav, onNav, o
         <Pressable
           key={key}
           onPress={() => {
-            onNav(key);
+            navigate(pathForSectionKey(key));
             onRequestClose?.();
           }}
           accessibilityRole="button"
@@ -60,7 +65,7 @@ export const SidebarNav = memo(function SidebarNav({ colors, activeNav, onNav, o
         </Pressable>
       );
     },
-    [activeNav, colors.accent, colors.navActiveBg, colors.bgMuted, colors.text, colors.textMuted, colors.textSecondary, narrow, onNav, onRequestClose],
+    [activeNav, colors.accent, colors.navActiveBg, colors.bgMuted, colors.text, colors.textMuted, colors.textSecondary, narrow, navigate, onRequestClose],
   );
 
   const body = ITEMS.map((it) => item(it));
@@ -71,7 +76,12 @@ export const SidebarNav = memo(function SidebarNav({ colors, activeNav, onNav, o
       accessibilityRole="navigation"
       accessibilityLabel="Primary"
     >
-      <Pressable onPress={() => onNav('overview')} style={styles.brand} accessibilityRole="link" accessibilityLabel="Wealth Curator home">
+      <Pressable
+        onPress={() => navigate('/dashboard')}
+        style={[styles.brand, narrow && styles.brandCompact]}
+        accessibilityRole="link"
+        accessibilityLabel="Wealth Curator home"
+      >
         <View style={[styles.logoMark, { backgroundColor: colors.accent }]} />
         <View>
           <Text style={[styles.brandTitle, { color: colors.text }]}>Wealth Curator</Text>
@@ -79,10 +89,25 @@ export const SidebarNav = memo(function SidebarNav({ colors, activeNav, onNav, o
         </View>
       </Pressable>
 
-      {narrow ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalNav}>
-          {body}
-        </ScrollView>
+      {isMobile ? (
+        <View style={styles.mobileNavContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.mobileNavContent}
+            style={styles.mobileNavScroll}
+          >
+            {body}
+          </ScrollView>
+        </View>
+      ) : narrow ? (
+        wrapNav ? (
+          <View style={styles.navWrap}>{body}</View>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalNav}>
+            {body}
+          </ScrollView>
+        )
       ) : (
         <View style={styles.navStack}>{body}</View>
       )}
@@ -116,7 +141,7 @@ const styles = RNStyleSheet.create({
     width: '100%',
     paddingTop: space.md,
     paddingBottom: space.sm,
-    paddingHorizontal: space.md,
+    paddingHorizontal: space.sm,
   },
   brand: {
     flexDirection: 'row',
@@ -124,6 +149,11 @@ const styles = RNStyleSheet.create({
     gap: space.sm,
     marginBottom: space.lg,
     paddingHorizontal: space.lg,
+  },
+  brandCompact: {
+    marginBottom: space.md,
+    paddingHorizontal: space.sm,
+    alignSelf: 'stretch',
   },
   logoMark: {
     width: 36,
@@ -155,6 +185,30 @@ const styles = RNStyleSheet.create({
     gap: space.xs,
     paddingBottom: space.sm,
     paddingHorizontal: space.xs,
+    flexGrow: 0,
+  },
+  navWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: space.xs,
+    paddingBottom: space.sm,
+    paddingHorizontal: space.xxs,
+  },
+  mobileNavContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'transparent',
+    backgroundColor: 'transparent',
+  },
+  mobileNavContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+  },
+  mobileNavScroll: {
+    flexGrow: 0,
   },
   row: {
     flexDirection: 'row',
@@ -171,7 +225,8 @@ const styles = RNStyleSheet.create({
     paddingVertical: space.sm,
     paddingHorizontal: space.md,
     borderRadius: radii.pill,
-    borderLeftWidth: 0,
+    minWidth: 100,
+    maxWidth: 140,
   },
   label: { fontFamily: font.sans, fontSize: 14, fontWeight: '600' },
   footer: {

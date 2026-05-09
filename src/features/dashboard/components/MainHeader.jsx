@@ -1,14 +1,8 @@
-import { Bell, Moon, PanelLeftClose, PanelLeftOpen, Search, Settings, Sun } from 'lucide-react';
+import { Moon, PanelLeftClose, PanelLeftOpen, Search, Sun } from 'lucide-react';
 import { memo } from 'react';
 import { Pressable, StyleSheet as RNStyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native-web';
 import { IconGlyph } from '../../../components/icons/IconGlyph.jsx';
 import { font, radii, space } from '../../../theme';
-
-const TABS = [
-  { key: 'overview', label: 'Overview' },
-  { key: 'portfolio', label: 'Portfolio' },
-  
-];
 
 export const MainHeader = memo(function MainHeader({
   colors,
@@ -16,8 +10,6 @@ export const MainHeader = memo(function MainHeader({
   query,
   onQueryChange,
   onSearchFocus,
-  activeNav,
-  onNav,
   onToggleTheme,
   user,
   onProfileAvatarPress,
@@ -26,11 +18,19 @@ export const MainHeader = memo(function MainHeader({
 }) {
   const { width } = useWindowDimensions();
   const compact = width < 720;
+  const narrow = width < 400;
 
   const clientSubtitle = (user.planTier || 'Private client').split('·')[0]?.trim() || 'Private client';
 
   return (
-    <View style={[styles.shell, { backgroundColor: colors.bg, borderBottomColor: colors.border }]} accessibilityRole="header">
+    <View
+      style={[
+        styles.shell,
+        narrow && styles.shellNarrow,
+        { backgroundColor: colors.bg, borderBottomColor: colors.border },
+      ]}
+      accessibilityRole="header"
+    >
       <View style={[styles.topRow, compact && styles.topRowStack]}>
         <View style={[styles.leadActions, compact && { width: '100%' }]}>
           {onToggleSidebar ? (
@@ -48,7 +48,7 @@ export const MainHeader = memo(function MainHeader({
               <IconGlyph icon={sidebarOpen ? PanelLeftClose : PanelLeftOpen} size={22} color={colors.text} />
             </Pressable>
           ) : null}
-          <View style={[styles.searchWrap, compact && styles.searchGrow]}>
+          {/* <View style={[styles.searchWrap, compact && styles.searchGrow]}>
             <View style={styles.searchIconSlot} pointerEvents="none">
               <IconGlyph icon={Search} size={18} color={colors.textMuted} />
             </View>
@@ -69,7 +69,15 @@ export const MainHeader = memo(function MainHeader({
               accessibilityLabel="Search"
               returnKeyType="search"
             />
-          </View>
+          </View> */}
+          <view> 
+            <text style={{color: colors.text, fontSize: 20, fontWeight: '700', textTransform: 'uppercase', fontStyle: 'BOLD'}}>
+            WELCOME BACK ALAXANDRA!
+            </text>
+            <br />
+          <Text  style={{color: colors.text, fontSize: 14, fontWeight: '400' ,fontStyle: 'italic'}}>It is the best time to manage you finance</Text>
+          </view>
+          
         </View>
 
         <View style={[styles.rightCluster, compact && styles.rightClusterWide]}>
@@ -110,28 +118,6 @@ export const MainHeader = memo(function MainHeader({
           </Pressable>
         </View>
       </View>
-
-      <View style={[styles.tabRow, compact && styles.tabRowScroll]} accessibilityRole="tablist">
-        {TABS.map(({ key, label }) => {
-          const active = activeNav === key;
-          return (
-            <Pressable
-              key={key}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={label}
-              onPress={() => onNav(key)}
-              style={({ pressed }) => [
-                styles.tab,
-                { borderBottomColor: active ? colors.accent : 'transparent' },
-                pressed && { opacity: 0.88 },
-              ]}
-            >
-              <Text style={[styles.tabLabel, { color: active ? colors.text : colors.textMuted }]}>{label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
     </View>
   );
 });
@@ -142,6 +128,10 @@ const styles = RNStyleSheet.create({
     paddingHorizontal: space.lg,
     paddingTop: space.md,
     paddingBottom: 0,
+  },
+  shellNarrow: {
+    paddingHorizontal: space.md,
+    paddingTop: space.sm,
   },
   topRow: {
     flexDirection: 'row',
@@ -190,7 +180,8 @@ const styles = RNStyleSheet.create({
     paddingRight: space.md,
     paddingVertical: 12,
     fontFamily: font.sans,
-    fontSize: 14,
+    /* 16px avoids iOS Safari zooming focused inputs */
+    fontSize: 16,
     outlineStyle: 'none',
   },
   rightCluster: {
@@ -224,23 +215,6 @@ const styles = RNStyleSheet.create({
   userText: { maxWidth: 160 },
   userName: { fontFamily: font.sans, fontSize: 14, fontWeight: '800' },
   userSub: { fontFamily: font.sans, fontSize: 10, fontWeight: '700', letterSpacing: 1.4, marginTop: 2 },
-  tabRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: space.sm,
-    flexWrap: 'wrap',
-  },
-  tabRowScroll: {
-    overflow: 'scroll',
-    marginHorizontal: -space.lg,
-    paddingHorizontal: space.lg,
-  },
-  tab: {
-    paddingVertical: space.sm,
-    paddingHorizontal: space.sm,
-    borderBottomWidth: 2,
-  },
-  tabLabel: { fontFamily: font.sans, fontSize: 13, fontWeight: '700' },
   hover: { opacity: 0.95 },
   pressed: { opacity: 0.88 },
 });

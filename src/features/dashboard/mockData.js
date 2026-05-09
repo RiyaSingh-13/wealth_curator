@@ -1,3 +1,5 @@
+import { Plane, Wifi, Zap } from 'lucide-react';
+
 export const MOCK_DASHBOARD = {
   user: {
     name: 'Alexandra Cole',
@@ -60,6 +62,69 @@ export const MOCK_DASHBOARD = {
       severity: 'info',
     },
   ],
+  budgets: [
+    {
+      id: 'b1',
+      category: 'Travel',
+      allocated: 2000,
+      spent: 1200,
+      status: 'On Track',
+      trend: 'down',
+      trendAmount: -150,
+    },
+    {
+      id: 'b2',
+      category: 'Dining',
+      allocated: 800,
+      spent: 650,
+      status: 'On Track',
+      trend: 'up',
+      trendAmount: 45,
+    },
+    {
+      id: 'b3',
+      category: 'Shopping',
+      allocated: 1200,
+      spent: 1350,
+      status: 'Over Budget',
+      trend: 'up',
+      trendAmount: 120,
+    },
+  ],
+  upcomingBills: [
+    {
+      id: 'bill1',
+      name: 'Fiber Internet',
+      category: 'Internet',
+      amount: 85.00,
+      dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+      autopay: true,
+    },
+    {
+      id: 'bill2',
+      name: 'Electricity',
+      category: 'Utilities',
+      amount: 142.50,
+      dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days from now
+      autopay: false,
+    },
+    {
+      id: 'bill3',
+      name: 'Rent',
+      category: 'Housing',
+      amount: 2840.00,
+      dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days from now
+      autopay: true,
+    },
+    {
+      id: 'bill4',
+      name: 'Phone Service',
+      category: 'Mobile',
+      amount: 65.00,
+      dueDate: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000), // 8 days from now
+      autopay: true,
+    },
+  ],
 };
 
 function buildTransactions(count) {
@@ -109,4 +174,6 @@ export const MOCK_EMPTY = {
   transactions: [],
   spending: [],
   alerts: [],
+  budgets: [],
+  upcomingBills: [],
 };

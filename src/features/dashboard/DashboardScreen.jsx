@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet as RNStyleSheet, Text, View, useWindowDimensions } from 'react-native-web';
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { EmptyState } from '../../components/states/EmptyState.jsx';
 import { ErrorState } from '../../components/states/ErrorState.jsx';
 import { LoadingState } from '../../components/states/LoadingState.jsx';
@@ -7,8 +8,10 @@ import { useAnalytics, useDebounce, useFetch, useLocalStorage } from '../../hook
 import { ANALYTICS_EVENTS } from '../../analytics/events';
 import { font, shadows, space, themes } from '../../theme';
 import { AlertsSection } from './components/AlertsSection.jsx';
+import { BudgetTracker } from './components/BudgetTracker.jsx';
 import { BudgetVelocityHero } from './components/BudgetVelocityHero.jsx';
 import { DocumentsSection } from './components/DocumentsSection.jsx';
+import { UpcomingBills } from './components/UpcomingBills.jsx';
 import { MainHeader } from './components/MainHeader.jsx';
 import { PortfolioInsights } from './components/PortfolioInsights.jsx';
 import { PortfolioSection } from './components/PortfolioSection.jsx';
@@ -19,7 +22,7 @@ import { SummaryCards } from './components/SummaryCards.jsx';
 import { TransactionsList } from './components/TransactionsList.jsx';
 import { buildInsights, getPortfolioInsightsModel } from './insights.js';
 import { fetchDashboardMock } from './mockApi.js';
-import { scrollToSection } from './scrollToSection.js';
+import { sectionKeyFromParam } from './routePaths.js';
 
 const DASHBOARD_KEY = 'dashboard-mock-v1';
 
@@ -32,27 +35,23 @@ const GUEST_USER = {
   memberSince: '—',
 };
 
-const SECTION_IDS = {
-  overview: 'section-overview',
-  portfolio: 'section-portfolio',
-  cashflow: 'section-cashflow',
-  documents: 'section-documents',
-  budgets: 'section-budgets',
-  insights: 'section-insights',
-};
-
 export function DashboardScreen() {
+  const { section } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeNav = useMemo(() => sectionKeyFromParam(section) ?? null, [section]);
+
   const [themeMode, setThemeMode] = useLocalStorage('wc-theme', 'dark');
   const colors = themes[themeMode];
   const { width } = useWindowDimensions();
   const isWide = width > 900;
+  const isCompact = width < 640;
 
   const { track } = useAnalytics();
 
   const fetcher = useCallback((signal) => fetchDashboardMock(signal), []);
   const { state, refetch } = useFetch(DASHBOARD_KEY, fetcher);
 
-  const [nav, setNav] = useState('overview');
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 280);
@@ -64,8 +63,10 @@ export function DashboardScreen() {
     if (q.length < 2) return;
     if (lastSearchTracked.current === q) return;
     lastSearchTracked.current = q;
-    track(ANALYTICS_EVENTS.SEARCH, { termLen: q.length, nav });
-  }, [debouncedQuery, nav, track]);
+    if (activeNav) {
+      track(ANALYTICS_EVENTS.SEARCH, { termLen: q.length, nav: activeNav });
+    }
+  }, [debouncedQuery, activeNav, track]);
 
   const data = state.status === 'success' ? state.data : null;
 
@@ -127,6 +128,10 @@ export function DashboardScreen() {
   const closeProfileSheet = useCallback(() => setProfileSheetOpen(false), []);
 
   useEffect(() => {
+    setProfileSheetOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
     if (!profileSheetOpen || typeof window === 'undefined') return;
     const onKeyDown = (e) => {
       if (e.key === 'Escape') setProfileSheetOpen(false);
@@ -135,24 +140,11 @@ export function DashboardScreen() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [profileSheetOpen]);
 
-  const onNav = useCallback(
-    (k) => {
-      setNav(k);
-      track(ANALYTICS_EVENTS.FILTER_CLICK, { type: 'nav', value: k });
-      if (k === 'profile') {
-        setProfileSheetOpen(true);
-        return;
-      }
-      setProfileSheetOpen(false);
-      scrollToSection(SECTION_IDS[k]);
-    },
-    [track],
-  );
-
-  const onSearchFocus = useCallback(() => scrollToSection('section-cashflow'), []);
+  const onSearchFocus = useCallback(() => {
+    navigate('/transactions');
+  }, [navigate]);
 
   const onProfileAvatarPress = useCallback(() => {
-    setNav('profile');
     setProfileSheetOpen(true);
     track(ANALYTICS_EVENTS.FILTER_CLICK, { type: 'profile_icon', value: 'open' });
   }, [track]);
@@ -189,23 +181,22 @@ export function DashboardScreen() {
 
   const onExecuteStrategy = useCallback(
     (insightId, action) => {
-      track(ANALYTICS_EVENTS.CTA_EXECUTE_STRATEGY, { insightId, action, nav });
+      track(ANALYTICS_EVENTS.CTA_EXECUTE_STRATEGY, { insightId, action, nav: activeNav });
     },
-    [nav, track],
+    [activeNav, track],
   );
 
   const onAlertCta = useCallback(
     (id) => {
-      track(ANALYTICS_EVENTS.CTA_EXECUTE_STRATEGY, { kind: 'alert', alertId: id, nav });
+      track(ANALYTICS_EVENTS.CTA_EXECUTE_STRATEGY, { kind: 'alert', alertId: id, nav: activeNav });
     },
-    [nav, track],
+    [activeNav, track],
   );
 
   const onBudgetAdjust = useCallback(() => {
-    setNav('budgets');
+    navigate('/budgets');
     track(ANALYTICS_EVENTS.FILTER_CLICK, { type: 'cta', value: 'adjust_budget_limits' });
-    scrollToSection(SECTION_IDS.budgets);
-  }, [track]);
+  }, [navigate, track]);
 
   const fiscalHeading = useMemo(
     () => new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date()),
@@ -214,10 +205,14 @@ export function DashboardScreen() {
 
   const isDesktop = width >= 1024;
 
+  if (activeNav == null) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <View style={[styles.layout, !isDesktop && styles.layoutStack]}>
-        <SidebarNav colors={colors} activeNav={nav} onNav={onNav} />
+        <SidebarNav colors={colors} />
 
         <View style={styles.mainColumn}>
           <MainHeader
@@ -226,8 +221,6 @@ export function DashboardScreen() {
             query={query}
             onQueryChange={setQuery}
             onSearchFocus={onSearchFocus}
-            activeNav={nav}
-            onNav={onNav}
             onToggleTheme={onToggleTheme}
             user={data?.user ?? GUEST_USER}
             onProfileAvatarPress={onProfileAvatarPress}
@@ -237,7 +230,11 @@ export function DashboardScreen() {
             nativeID="main-content"
             accessibilityRole="main"
             style={styles.scrollFlex}
-            contentContainerStyle={[styles.content, isWide && styles.contentWide]}
+            contentContainerStyle={[
+              styles.content,
+              isWide && styles.contentWide,
+              isCompact && styles.contentCompact,
+            ]}
             keyboardShouldPersistTaps="handled"
           >
         {state.status === 'loading' ? <LoadingState colors={colors} /> : null}
@@ -254,72 +251,83 @@ export function DashboardScreen() {
 
         {state.status === 'success' && data ? (
           <View style={styles.stack}>
-            <View nativeID="section-overview" accessibilityLabel="Financial overview region" style={styles.stack}>
-              <View style={[styles.hero, styles.heroRow]}>
-                <View style={styles.heroText}>
-                  <Text style={[styles.kickerBlue, { color: colors.accent }]} accessibilityRole="text">
-                    Monthly overview
-                  </Text>
-                  <Text style={[styles.headline, { color: colors.text }]} accessibilityRole="header">
-                    Monthly Overview
-                  </Text>
-                  <Text style={[styles.periodSub, { color: colors.textMuted }]} accessibilityRole="text">
-                    Fiscal period: {fiscalHeading}
-                  </Text>
+            {activeNav === 'overview' ? (
+              <View nativeID="section-overview" accessibilityLabel="Financial overview region" style={styles.stack}>
+                <View style={[styles.hero, styles.heroRow]}>
+                  <View style={styles.heroText}>
+                    <Text style={[styles.kickerBlue, { color: colors.accent }]} accessibilityRole="text">
+                      Monthly overview
+                    </Text>
+                    <Text
+                      style={[styles.headline, isCompact && styles.headlineCompact, { color: colors.text }]}
+                      accessibilityRole="header"
+                    >
+                      Monthly Overview
+                    </Text>
+                    <Text style={[styles.periodSub, { color: colors.textMuted }]} accessibilityRole="text">
+                      Fiscal period: {fiscalHeading}
+                    </Text>
+                  </View>
                 </View>
+
+                <BudgetVelocityHero colors={colors} summary={summary} onAdjust={onBudgetAdjust} />
+
+                <SummaryCards colors={colors} summary={summary} />
               </View>
+            ) : null}
 
-              <BudgetVelocityHero colors={colors} summary={summary} onAdjust={onBudgetAdjust} />
+            {activeNav === 'insights' ? (
+              <View nativeID="section-insights">
+                {insightModel ? (
+                  <PortfolioInsights
+                    colors={colors}
+                    model={insightModel}
+                    data={data}
+                    onExecuteStrategy={onExecuteStrategy}
+                  />
+                ) : (
+                  <EmptyState colors={colors} message="No portfolio insights yet — sync data or check back after the next close." />
+                )}
+              </View>
+            ) : null}
 
-              <SummaryCards colors={colors} summary={summary} />
-            </View>
+            {activeNav === 'portfolio' ? <PortfolioSection colors={colors} holdings={data.holdings} /> : null}
 
-            <View nativeID="section-insights">
-              {insightModel ? (
-                <PortfolioInsights
+            {activeNav === 'budgets' ? (
+              <View nativeID="section-budgets" accessibilityLabel="Category budgets" style={styles.stack}>
+                <BudgetTracker colors={colors} budgets={data.budgets} />
+                <UpcomingBills colors={colors} bills={data.upcomingBills} />
+                <SpendingBars colors={colors} slices={data.spending} />
+              </View>
+            ) : null}
+
+            {activeNav === 'cashflow' ? (
+              <View nativeID="section-cashflow" accessibilityLabel="Cashflow and transactions region" style={styles.stack}>
+                <AlertsSection colors={colors} alerts={data.alerts} onAlertCta={onAlertCta} />
+
+                {filteredTransactions.length === 0 ? (
+                  <EmptyState
+                    colors={colors}
+                    message="No transactions match these filters. Widen search or reset category chips."
+                  />
+                ) : null}
+
+                <TransactionsList
                   colors={colors}
-                  model={insightModel}
-                  data={data}
-                  onExecuteStrategy={onExecuteStrategy}
+                  rows={filteredTransactions}
+                  searchLabel={debouncedQuery.trim()}
+                  query={query}
+                  onQueryChange={setQuery}
+                  selectedCategory={category}
+                  categories={categories}
+                  onSelectCategory={onSelectCategory}
                 />
-              ) : null}
-            </View>
+              </View>
+            ) : null}
 
-            <PortfolioSection colors={colors} holdings={data.holdings} />
-
-            <View nativeID="section-budgets" accessibilityLabel="Category budgets" style={styles.stack}>
-              <SpendingBars colors={colors} slices={data.spending} />
-            </View>
-
-            <View nativeID="section-cashflow" accessibilityLabel="Cashflow and transactions region" style={styles.stack}>
-              <AlertsSection colors={colors} alerts={data.alerts} onAlertCta={onAlertCta} />
-
-              {filteredTransactions.length === 0 ? (
-                <EmptyState
-                  colors={colors}
-                  message="No transactions match these filters. Widen search or reset category chips."
-                />
-              ) : null}
-
-              <TransactionsList
-                colors={colors}
-                rows={filteredTransactions}
-                searchLabel={debouncedQuery.trim()}
-                query={query}
-                onQueryChange={setQuery}
-                selectedCategory={category}
-                categories={categories}
-                onSelectCategory={onSelectCategory}
-              />
-            </View>
-
-            <DocumentsSection colors={colors} documents={data.documents} onOpen={onDocumentOpen} />
-
-            <View style={styles.footer}>
-              <Text style={[styles.footerText, { color: colors.textMuted }]}>
-                Wealth Curator demo — append ?fail=1 to simulate errors or ?empty=1 for empty states. GA4/GTM via env IDs.
-              </Text>
-            </View>
+            {activeNav === 'goals' ? (
+              <DocumentsSection colors={colors} documents={data.documents} onOpen={onDocumentOpen} />
+            ) : null}
           </View>
         ) : null}
           </ScrollView>
@@ -344,9 +352,10 @@ export function DashboardScreen() {
               styles.profilePanel,
               shadows.panel,
               {
-                width: Math.min(width, 420),
+                width: width < 480 ? '100%' : Math.min(width, 420),
                 backgroundColor: colors.bg,
                 borderLeftColor: colors.border,
+                borderLeftWidth: width < 480 ? 0 : 1,
               },
             ]}
           >
@@ -386,8 +395,8 @@ const styles = RNStyleSheet.create({
   root: { flex: 1, minHeight: '100vh' },
   layout: { flex: 1, flexDirection: 'row', minHeight: '100vh' },
   layoutStack: { flexDirection: 'column' },
-  mainColumn: { flex: 1, minWidth: 0, flexDirection: 'column' },
-  scrollFlex: { flex: 1 },
+  mainColumn: { flex: 1, minWidth: 0, minHeight: 0, flexDirection: 'column' },
+  scrollFlex: { flex: 1, minHeight: 0 },
   content: {
     paddingHorizontal: space.lg,
     paddingBottom: space.xxl,
@@ -400,6 +409,11 @@ const styles = RNStyleSheet.create({
   contentWide: {
     paddingHorizontal: space.xl,
   },
+  contentCompact: {
+    paddingHorizontal: space.md,
+    paddingTop: space.sm,
+    gap: space.lg,
+  },
   stack: { gap: space.xl },
   hero: { gap: space.xs },
   heroRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: space.lg },
@@ -407,6 +421,7 @@ const styles = RNStyleSheet.create({
   kickerBlue: { fontFamily: font.sans, fontSize: 11, fontWeight: '800', letterSpacing: 2, textTransform: 'uppercase' },
   periodSub: { fontFamily: font.sans, fontSize: 14, fontWeight: '600', marginTop: space.xxs },
   headline: { fontFamily: font.sans, fontSize: 32, fontWeight: '800', lineHeight: 38, letterSpacing: -0.8, maxWidth: 920 },
+  headlineCompact: { fontSize: 26, lineHeight: 32, letterSpacing: -0.6 },
   footer: { paddingTop: space.lg },
   footerText: { fontFamily: font.sans, fontSize: 12, lineHeight: 18 },
   profileOverlay: {

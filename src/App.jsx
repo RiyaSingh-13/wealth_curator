@@ -8,6 +8,15 @@ const DashboardScreen = lazy(() =>
   import('./features/dashboard/DashboardScreen').then((m) => ({ default: m.DashboardScreen })),
 );
 
+function DashboardRoute() {
+  const { track } = useAnalytics();
+  return (
+    <DashboardErrorBoundary onError={() => track(ANALYTICS_EVENTS.LAZY_CHUNK_ERROR, { chunk: 'DashboardScreen' })}>
+      <DashboardScreen />
+    </DashboardErrorBoundary>
+  );
+}
+
 function RouteAnalyticsShell() {
   const location = useLocation();
   const { track } = useAnalytics();
@@ -31,15 +40,9 @@ function RouteAnalyticsShell() {
   return (
     <Suspense fallback={fallback}>
       <Routes>
-        <Route
-          path="/"
-          element={
-            <DashboardErrorBoundary onError={() => track(ANALYTICS_EVENTS.LAZY_CHUNK_ERROR, { chunk: 'DashboardScreen' })}>
-              <DashboardScreen />
-            </DashboardErrorBoundary>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/:section" element={<DashboardRoute />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Suspense>
   );

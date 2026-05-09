@@ -91,9 +91,21 @@ const gStyles = {
 export const PortfolioInsights = memo(function PortfolioInsights({ colors, model, data, onExecuteStrategy }) {
   const { width } = useWindowDimensions();
   const wide = width > 1020;
+  const compact = width < 720;
 
-  const onReview = useCallback(() => onExecuteStrategy('ins-tech', 'execute'), [onExecuteStrategy]);
-  const onDismiss = useCallback(() => onExecuteStrategy('ins-tech', 'dismiss'), [onExecuteStrategy]);
+  const onReview = useCallback(() => {
+    onExecuteStrategy('ins-tech', 'execute');
+    if (typeof window !== 'undefined') {
+      window.alert('Strategy review recorded. Deeper flows are coming soon.');
+    }
+  }, [onExecuteStrategy]);
+
+  const onDismiss = useCallback(() => {
+    onExecuteStrategy('ins-tech', 'dismiss');
+    if (typeof window !== 'undefined') {
+      window.alert('Insight dismissed for now. You can revisit similar ideas in future updates.');
+    }
+  }, [onExecuteStrategy]);
 
   const nwStr = useMemo(
     () =>
@@ -155,7 +167,10 @@ export const PortfolioInsights = memo(function PortfolioInsights({ colors, model
         <Text style={[styles.kickerOrg, { color: colors.accent }]} accessibilityRole="text">
           Wealth intelligence
         </Text>
-        <Text style={[styles.pageTitle, { color: colors.text }]} accessibilityRole="header">
+        <Text
+          style={[styles.pageTitle, compact && styles.pageTitleCompact, { color: colors.text }]}
+          accessibilityRole="header"
+        >
           Portfolio Insights
         </Text>
         <Text style={[styles.pageSub, { color: colors.textSecondary }]}>
@@ -169,6 +184,7 @@ export const PortfolioInsights = memo(function PortfolioInsights({ colors, model
           style={[
             styles.card,
             styles.signalCard,
+            compact && styles.signalCardCompact,
             { borderColor: colors.border, backgroundColor: colors.bgElevated },
             shadows.sm,
           ]}
@@ -219,7 +235,13 @@ export const PortfolioInsights = memo(function PortfolioInsights({ colors, model
         </View>
 
         <View
-          style={[styles.card, styles.rightColCard, { borderColor: colors.border, backgroundColor: colors.bgElevated }, shadows.sm]}
+          style={[
+            styles.card,
+            styles.rightColCard,
+            compact && styles.rightColCardCompact,
+            { borderColor: colors.border, backgroundColor: colors.bgElevated },
+            shadows.sm,
+          ]}
         >
           <Text style={[styles.cardKicker, { color: colors.textMuted }]}>Market sentiment</Text>
           <View style={styles.sentimentInner}>
@@ -239,12 +261,20 @@ export const PortfolioInsights = memo(function PortfolioInsights({ colors, model
       </View>
 
       <View style={[wide ? styles.gridMid : styles.col]}>
-        <View style={[styles.midLeft, styles.card, { borderColor: colors.border, backgroundColor: colors.bgElevated }, shadows.sm]}>
+        <View
+          style={[
+            styles.midLeft,
+            compact && styles.midBleed,
+            styles.card,
+            { borderColor: colors.border, backgroundColor: colors.bgElevated },
+            shadows.sm,
+          ]}
+        >
           <Text style={[styles.bigMoney, { color: colors.text }]}>{nwStr}</Text>
           <Text style={[styles.deltaGreen, { color: colors.positive }]}>{nwDelta}</Text>
           <InsightsPerformanceChart colors={colors} baseValue={model.netWorth} />
         </View>
-        <View style={styles.midRight}>
+        <View style={[styles.midRight, compact && styles.midBleed]}>
           <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.bgElevated }, shadows.sm]}>
             <Text style={[styles.cardKicker, { color: colors.textMuted }]}>Sector allocation</Text>
             {model.sectors.length === 0 ? (
@@ -299,7 +329,10 @@ export const PortfolioInsights = memo(function PortfolioInsights({ colors, model
 
         <View style={[styles.cfiGrid, wide && styles.cfiGridWide]}>
           {cashCards.map((c) => (
-            <View key={c.key} style={[styles.cfiMini, { borderColor: colors.border, backgroundColor: colors.bgMuted }]}>
+            <View
+              key={c.key}
+              style={[styles.cfiMini, compact && styles.cfiMiniCompact, { borderColor: colors.border, backgroundColor: colors.bgMuted }]}
+            >
               <View style={[styles.cfiIco, { borderColor: colors.border, backgroundColor: colors.bgElevated }]}>
                 <IconGlyph icon={c.icon} size={22} color={colors.accent} strokeWidth={2} />
               </View>
@@ -341,6 +374,7 @@ const styles = RNStyleSheet.create({
   pageHead: { gap: space.xs, maxWidth: 900 },
   kickerOrg: { fontFamily: font.sans, fontSize: 12, fontWeight: '800', letterSpacing: 2.2, textTransform: 'uppercase' },
   pageTitle: { fontFamily: font.sans, fontSize: 32, fontWeight: '800', letterSpacing: -0.8 },
+  pageTitleCompact: { fontSize: 26, letterSpacing: -0.5 },
   pageSub: { fontFamily: font.sans, fontSize: 15, lineHeight: 22 },
   gridTop: { flexDirection: 'row', gap: space.md, alignItems: 'stretch' },
   gridMid: { flexDirection: 'row', gap: space.md, alignItems: 'flex-start' },
@@ -352,7 +386,10 @@ const styles = RNStyleSheet.create({
     gap: space.md,
   },
   signalCard: { flex: 1.4, minWidth: 280 },
+  signalCardCompact: { flexGrow: 0, minWidth: 0, maxWidth: '100%', alignSelf: 'stretch' },
   rightColCard: { flex: 1, minWidth: 260, gap: space.sm },
+  rightColCardCompact: { minWidth: 0, maxWidth: '100%', alignSelf: 'stretch' },
+  midBleed: { minWidth: 0, maxWidth: '100%', alignSelf: 'stretch' },
   signalBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   sigDot: { width: 8, height: 8, borderRadius: 4 },
   signalBadge: { fontFamily: font.sans, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
@@ -437,6 +474,7 @@ const styles = RNStyleSheet.create({
   cfiLink: { fontFamily: font.sans, fontSize: 14, fontWeight: '800' },
   cfiGrid: { gap: space.md },
   cfiGridWide: { flexDirection: 'row', flexWrap: 'wrap' },
+  cfiMiniCompact: { minWidth: 0 },
   cfiMini: {
     flex: 1,
     minWidth: 220,

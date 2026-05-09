@@ -1,24 +1,28 @@
 import { Landmark, PiggyBank, Receipt } from 'lucide-react';
 import { memo } from 'react';
-import { StyleSheet as RNStyleSheet, Text, View } from 'react-native-web';
+import { StyleSheet as RNStyleSheet, Text, View, useWindowDimensions } from 'react-native-web';
 import { IconGlyph } from '../../../components/icons/IconGlyph.jsx';
 import { font, radii, space } from '../../../theme';
 
 export const SummaryCards = memo(function SummaryCards({ colors, summary }) {
+  const { width } = useWindowDimensions();
+  const stack = width < 560;
+
   return (
-    <View style={styles.grid} accessibilityRole="text" accessibilityLabel="Financial summary">
-      <Card colors={colors} icon={Landmark} label="Net worth" value={summary.netWorth} hint={summary.netWorthDelta} accent />
-      <Card colors={colors} icon={Receipt} label="Monthly spending" value={summary.spending} hint={summary.spendingDelta} />
-      <Card colors={colors} icon={PiggyBank} label="Savings rate" value={summary.savingsRate} hint={summary.savingsDelta} />
+    <View style={[styles.grid, stack && styles.gridStack]} accessibilityRole="text" accessibilityLabel="Financial summary">
+      <Card stack={stack} colors={colors} icon={Landmark} label="Net worth" value={summary.netWorth} hint={summary.netWorthDelta} accent />
+      <Card stack={stack} colors={colors} icon={Receipt} label="Monthly spending" value={summary.spending} hint={summary.spendingDelta} />
+      <Card stack={stack} colors={colors} icon={PiggyBank} label="Savings rate" value={summary.savingsRate} hint={summary.savingsDelta} />
     </View>
   );
 });
 
-function Card({ colors, label, value, hint, accent, icon: MetricIcon }) {
+function Card({ colors, label, value, hint, accent, stack, icon: MetricIcon }) {
   return (
     <View
       style={[
         styles.card,
+        stack && styles.cardStack,
         {
           borderColor: colors.border,
           backgroundColor: colors.bgElevated,
@@ -43,6 +47,10 @@ const styles = RNStyleSheet.create({
     flexWrap: 'wrap',
     gap: space.md,
   },
+  gridStack: {
+    flexDirection: 'column',
+    flexWrap: 'nowrap',
+  },
   card: {
     flexGrow: 1,
     flexBasis: 240,
@@ -51,6 +59,11 @@ const styles = RNStyleSheet.create({
     borderWidth: 1,
     gap: space.xs,
     minHeight: 120,
+  },
+  cardStack: {
+    flexBasis: 'auto',
+    width: '100%',
+    minWidth: 0,
   },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   label: {
