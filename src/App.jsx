@@ -56,31 +56,39 @@ export default function App() {
   );
 }
 
-class DashboardErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
+function DashboardErrorBoundary({ children, onError }) {
+  const [hasError, setHasError] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleError = (error, errorInfo) => {
+      console.error(error);
+      setHasError(true);
+      onError?.();
+    };
+
+    // Set up error handling
+    const originalConsoleError = console.error;
+    console.error = (...args) => {
+      originalConsoleError(...args);
+      if (args[0] instanceof Error) {
+        handleError(args[0]);
+      }
+    };
+
+    return () => {
+      console.error = originalConsoleError;
+    };
+  }, [onError]);
+
+  if (hasError) {
+    return (
+      <View style={styles.fallback}>
+        <ActivityIndicator color="#c9a962" />
+      </View>
+    );
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error) {
-    console.error(error);
-    this.props.onError?.();
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <View style={styles.fallback}>
-          <ActivityIndicator color="#c9a962" />
-        </View>
-      );
-    }
-    return this.props.children;
-  }
+  return children;
 }
 
 const styles = RNStyleSheet.create({
